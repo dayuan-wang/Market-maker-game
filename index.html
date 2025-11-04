@@ -26,16 +26,18 @@
         
         <h1 class="text-2xl font-bold text-center text-blue-400 mb-4">Market Maker Challenge</h1>
         <p class="text-sm text-gray-400 mb-1">
-            - The hidden 'True Value of the stock' (X) is an integer between 5 and 95. You don't know the exact value of X in the beginning. 
+            - The Setup: The hidden 'True Value' (X) of an asset is an integer between 5 and 95. You do not know this value.
         </p>
         <p class="text-sm text-gray-400 mb-1">
             - The market is composed of 2 types of traders, both types believe that they know the true value of the stock. 50% Bulls believe X+5 is the True Value and 50% Bears believe X-5 is the True Value.
         </p>
         <p class="text-sm text-gray-400 mb-4">
-            - Each round, if the trader believe they can make profit from the market, they will buy/sell. otherwise they will not trade. 
-        </p>
-        <p class="text-sm text-gray-400 mb-4">
-            - Your are the market maker, your goal is to maximize your profit. You have 10 rounds. The spread of market is fixed to 10. 
+            - How to Play:
+            1. You are the Market Maker. In each round, you submit a Bid price.
+            2. Your Ask price is automatically set to Bid + 10.
+            3.A single trader (a Bull or a Bear, 50/50 chance) will appear.
+            4. Each trader (either a Bear or a Bull) will check your market and decide to BUY, SELL, or NOT TRADE. They will not trade if they dont think the market is profitable. 
+            5. The game ends after 10 rounds.
         </p>
         <!-- Scoreboard -->
         <div class="grid grid-cols-3 gap-4 text-center mb-6 bg-gray-900 p-4 rounded-lg">
