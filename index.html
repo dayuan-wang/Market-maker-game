@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- My game -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -16,8 +15,9 @@
             padding-left: 8px;
             margin-bottom: 4px;
         }
-        .log-bull { border-color: #3b82f6; } /* Blue for Bull */
-        .log-bear { border-color: #ef4444; } /* Red for Bear */
+        /* UPDATED: Colors are for actions, not trader types */
+        .log-buy { border-color: #22c55e; } /* Green for Buy */
+        .log-sell { border-color: #ef4444; } /* Red for Sell */
         .log-system { border-color: #f97316; } /* Orange for System */
     </style>
 </head>
@@ -26,8 +26,15 @@
     <div class="w-full max-w-md bg-gray-800 rounded-lg shadow-xl p-6">
         
         <h1 class="text-2xl font-bold text-center text-blue-400 mb-4">Market Maker Challenge</h1>
+        <!-- UPDATED: Instructions -->
+        <p class="text-sm text-gray-400 mb-1">
+            - The hidden 'True Value' (X) is an integer between 5 and 95.
+        </p>
+        <p class="text-sm text-gray-400 mb-1">
+            - The market is 50% Bulls (believe X+5) and 50% Bears (believe X-5).
+        </p>
         <p class="text-sm text-gray-400 mb-4">
-            Find the hidden "True Value" (X) by making a market. You have 10 trades. The spread is fixed at 10.
+            - Your goal is to **maximize your profit**. You have 10 trades.
         </p>
 
         <!-- Scoreboard -->
@@ -142,8 +149,9 @@
             // Hide game over, show controls
             gameOverDiv.classList.add('hidden');
             gameControlsDiv.classList.remove('hidden');
-            
-            addLogMessage("New game started. Find the hidden value!", "system");
+
+            // UPDATED: Clearer log message
+            addLogMessage("New game started. Maximize your PnL!", "system");
         }
 
         /**
@@ -161,15 +169,16 @@
         /**
          * Adds a message to the game log
          */
-        function addLogMessage(message, traderType) {
+        function addLogMessage(message, logType) {
             let entry = document.createElement('div');
             entry.textContent = message;
             
-            if (traderType === 'bull') {
-                entry.className = 'log-entry log-bull';
-            } else if (traderType === 'bear') {
-                entry.className = 'log-entry log-bear';
-            } else {
+            // UPDATED: Use logType for class
+            if (logType === 'buy') {
+                entry.className = 'log-entry log-buy';
+            } else if (logType === 'sell') {
+                entry.className = 'log-entry log-sell';
+            } else { // 'system' or 'no_trade'
                 entry.className = 'log-entry log-system';
             }
             
@@ -219,37 +228,43 @@
             if (trader_type === 'bull') {
                 // --- Bull Logic (believes X+5) ---
                 if (ask_price < bull_belief) {
-                    // Bull BUYS from us
-                    addLogMessage(`A Bull appeared and BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "bull");
+                    // Bull BUYS from us (preferred trade)
+                    // UPDATED: Generic log message
+                    addLogMessage(`A trader BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "buy");
                     inventory--;
                     pnl += ask_price;
                     tradeOccurred = true;
                 } else if (bid_price > bull_belief) {
                     // Bull SELLS to us (unconventional)
-                    addLogMessage(`A Bull appeared and SOLD 1 share @ $${bid_price.toFixed(2)}`, "bull");
+                    // UPDATED: Generic log message
+                    addLogMessage(`A trader SOLD 1 share @ $${bid_price.toFixed(2)}`, "sell");
                     inventory++;
                     pnl -= bid_price;
                     tradeOccurred = true;
                 } else {
-                    addLogMessage("A Bull appeared. NO TRADE.", "bull");
+                    // UPDATED: Generic log message
+                    addLogMessage("A trader appeared. NO TRADE.", "system");
                 }
                 
             } else {
                 // --- Bear Logic (believes X-5) ---
                 if (bid_price > bear_belief) {
-                    // Bear SELLS to us
-                    addLogMessage(`A Bear appeared and SOLD 1 share @ $${bid_price.toFixed(2)}`, "bear");
+                    // Bear SELLS to us (preferred trade)
+                    // UPDATED: Generic log message
+                    addLogMessage(`A trader SOLD 1 share @ $${bid_price.toFixed(2)}`, "sell");
                     inventory++;
                     pnl -= bid_price;
                     tradeOccurred = true;
                 } else if (ask_price < bear_belief) {
                     // Bear BUYS from us (unconventional)
-                    addLogMessage(`A Bear appeared and BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "bear");
+                    // UPDATED: Generic log message
+                    addLogMessage(`A trader BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "buy");
                     inventory--;
                     pnl += ask_price;
                     tradeOccurred = true;
                 } else {
-                    addLogMessage("A Bear appeared. NO TRADE.", "bear");
+                    // UPDATED: Generic log message
+                    addLogMessage("A trader appeared. NO TRADE.", "system");
                 }
             }
 
@@ -290,3 +305,4 @@
     </script>
 </body>
 </html>
+
