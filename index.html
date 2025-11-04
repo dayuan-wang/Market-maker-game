@@ -15,7 +15,6 @@
             padding-left: 8px;
             margin-bottom: 4px;
         }
-        /* UPDATED: Colors are for actions, not trader types */
         .log-buy { border-color: #22c55e; } /* Green for Buy */
         .log-sell { border-color: #ef4444; } /* Red for Sell */
         .log-system { border-color: #f97316; } /* Orange for System */
@@ -26,22 +25,22 @@
     <div class="w-full max-w-md bg-gray-800 rounded-lg shadow-xl p-6">
         
         <h1 class="text-2xl font-bold text-center text-blue-400 mb-4">Market Maker Challenge</h1>
-        <!-- UPDATED: Instructions -->
         <p class="text-sm text-gray-400 mb-1">
-            - The hidden 'True Value' (X) is an integer between 5 and 95.
+            - The hidden 'True Value of the stock' (X) is an integer between 5 and 95. You don't know the exact value of X in the beginning. 
         </p>
         <p class="text-sm text-gray-400 mb-1">
-            - The market is 50% Bulls (believe X+5) and 50% Bears (believe X-5).
+            - The market is composed of 2 types of traders, both types believe that they know the true value of the stock. 50% Bulls believe X+5 is the True Value and 50% Bears believe X-5 is the True Value.
         </p>
         <p class="text-sm text-gray-400 mb-4">
-            - Your goal is to **maximize your profit**. You have 10 trades.
+            - Your goal is to **maximize your profit**. You have 10 rounds.
         </p>
 
         <!-- Scoreboard -->
         <div class="grid grid-cols-3 gap-4 text-center mb-6 bg-gray-900 p-4 rounded-lg">
             <div>
-                <span class="block text-xs text-gray-400">TRADES</span>
-                <span id="trade-count" class="text-2xl font-bold">0</span> / 10
+                <!-- UPDATED: "TRADES" to "ROUNDS" -->
+                <span class="block text-xs text-gray-400">ROUNDS</span>
+                <span id="round-count" class="text-2xl font-bold">0</span> / 10
             </div>
             <div>
                 <span class="block text-xs text-gray-400">INVENTORY</span>
@@ -101,12 +100,14 @@
         let bear_belief;
         let inventory = 0;
         let pnl = 0.0;
-        let trade_count = 0;
+        // UPDATED: "trade_count" to "round_count"
+        let round_count = 0;
         const SPREAD = 10;
-        const MAX_TRADES = 10;
+        const MAX_ROUNDS = 10; // Renamed from MAX_TRADES
 
         // --- DOM Element References ---
-        const tradeCountSpan = document.getElementById('trade-count');
+        // UPDATED: "tradeCountSpan" to "roundCountSpan"
+        const roundCountSpan = document.getElementById('round-count');
         const inventorySpan = document.getElementById('inventory');
         const pnlSpan = document.getElementById('pnl');
         const bidInput = document.getElementById('bid-input');
@@ -129,28 +130,27 @@
          * Resets the game to its initial state
          */
         function startGame() {
-            // Set the secret value (integer 5 to 95)
             true_value_X = Math.floor(Math.random() * 91) + 5;
             bull_belief = true_value_X + 5;
             bear_belief = true_value_X - 5;
             
             inventory = 0;
             pnl = 0.0;
-            trade_count = 0;
+            round_count = 0; // Renamed
 
             // Reset UI
-            tradeCountSpan.textContent = "0";
+            roundCountSpan.textContent = "0"; // Renamed
             inventorySpan.textContent = "0";
             pnlSpan.textContent = "$0.00";
             bidInput.value = "";
             askDisplaySpan.textContent = "--";
             logBox.innerHTML = "";
             
-            // Hide game over, show controls
             gameOverDiv.classList.add('hidden');
             gameControlsDiv.classList.remove('hidden');
+            bidInput.disabled = false; // Ensure input is enabled
+            submitButton.disabled = false;
 
-            // UPDATED: Clearer log message
             addLogMessage("New game started. Maximize your PnL!", "system");
         }
 
@@ -168,12 +168,20 @@
 
         /**
          * Adds a message to the game log
+         * UPDATED: Now takes bid and ask to record the market
          */
-        function addLogMessage(message, logType) {
+        function addLogMessage(message, logType, bid, ask) {
             let entry = document.createElement('div');
-            entry.textContent = message;
             
-            // UPDATED: Use logType for class
+            // Format the message
+            let fullMessage = message;
+            if (bid !== undefined && ask !== undefined) {
+                // Prepend the market info
+                fullMessage = `[Mkt: ${bid}@${ask}] ${message}`;
+            }
+            entry.textContent = fullMessage;
+            
+            // Set color class based on logType
             if (logType === 'buy') {
                 entry.className = 'log-entry log-buy';
             } else if (logType === 'sell') {
@@ -189,6 +197,8 @@
          * Ends the game and shows the final score
          */
         function endGame() {
+            bidInput.disabled = true;
+            submitButton.disabled = true;
             gameControlsDiv.classList.add('hidden');
             gameOverDiv.classList.remove('hidden');
 
@@ -220,82 +230,61 @@
             }
             
             const ask_price = bid_price + SPREAD;
-            let tradeOccurred = false;
             
+            // UPDATED: Increment round count every valid click
+            round_count++;
+
             // 1. A random trader appears
             const trader_type = Math.random() < 0.5 ? 'bull' : 'bear';
             
             if (trader_type === 'bull') {
                 // --- Bull Logic (believes X+5) ---
                 if (ask_price < bull_belief) {
-                    // Bull BUYS from us (preferred trade)
-                    // UPDATED: Generic log message
-                    addLogMessage(`A trader BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "buy");
+                    addLogMessage(`A trader BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "buy", bid_price, ask_price);
                     inventory--;
                     pnl += ask_price;
-                    tradeOccurred = true;
                 } else if (bid_price > bull_belief) {
-                    // Bull SELLS to us (unconventional)
-                    // UPDATED: Generic log message
-                    addLogMessage(`A trader SOLD 1 share @ $${bid_price.toFixed(2)}`, "sell");
+                    addLogMessage(`A trader SOLD 1 share @ $${bid_price.toFixed(2)}`, "sell", bid_price, ask_price);
                     inventory++;
                     pnl -= bid_price;
-                    tradeOccurred = true;
                 } else {
-                    // UPDATED: Generic log message
-                    addLogMessage("A trader appeared. NO TRADE.", "system");
+                    addLogMessage("A trader appeared. NO TRADE.", "system", bid_price, ask_price);
                 }
                 
             } else {
                 // --- Bear Logic (believes X-5) ---
                 if (bid_price > bear_belief) {
-                    // Bear SELLS to us (preferred trade)
-                    // UPDATED: Generic log message
-                    addLogMessage(`A trader SOLD 1 share @ $${bid_price.toFixed(2)}`, "sell");
+                    addLogMessage(`A trader SOLD 1 share @ $${bid_price.toFixed(2)}`, "sell", bid_price, ask_price);
                     inventory++;
                     pnl -= bid_price;
-                    tradeOccurred = true;
                 } else if (ask_price < bear_belief) {
-                    // Bear BUYS from us (unconventional)
-                    // UPDATED: Generic log message
-                    addLogMessage(`A trader BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "buy");
+                    addLogMessage(`A trader BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "buy", bid_price, ask_price);
                     inventory--;
                     pnl += ask_price;
-                    tradeOccurred = true;
                 } else {
-                    // UPDATED: Generic log message
-                    addLogMessage("A trader appeared. NO TRADE.", "system");
+                    addLogMessage("A trader appeared. NO TRADE.", "system", bid_price, ask_price);
                 }
             }
 
             // 3. Update scores
-            if (tradeOccurred) {
-                trade_count++;
-            }
-            
-            tradeCountSpan.textContent = trade_count;
+            roundCountSpan.textContent = round_count;
             inventorySpan.textContent = inventory;
             pnlSpan.textContent = `$${pnl.toFixed(2)}`;
 
             // 4. Check for game over
-            if (trade_count >= MAX_TRADES) {
+            // UPDATED: Check round_count and MAX_ROUNDS
+            if (round_count >= MAX_ROUNDS) {
                 endGame();
             }
         }
 
         // --- 3. Event Listeners ---
         
-        // Start the game when the page loads
         document.addEventListener('DOMContentLoaded', startGame);
-        
-        // Connect the buttons
         submitButton.addEventListener('click', playRound);
         resetButton.addEventListener('click', startGame);
-        
-        // Auto-update the "Ask" field
         bidInput.addEventListener('input', updateAskDisplay);
         
-        // Allow pressing Enter to submit
         bidInput.addEventListener('keyup', function(event) {
             if (event.key === "Enter") {
                 submitButton.click();
