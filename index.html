@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Maker Challenge</title>
+    <!-- 1. Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple transition for all elements */
+        * { transition: all 0.2s ease-in-out; }
+        /* Style for the log messages */
+        .log-entry {
+            border-left-width: 4px;
+            padding-left: 8px;
+            margin-bottom: 4px;
+        }
+        .log-bull { border-color: #3b82f6; } /* Blue for Bull */
+        .log-bear { border-color: #ef4444; } /* Red for Bear */
+        .log-system { border-color: #f97316; } /* Orange for System */
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen font-sans">
+
+    <div class="w-full max-w-md bg-gray-800 rounded-lg shadow-xl p-6">
+        
+        <h1 class="text-2xl font-bold text-center text-blue-400 mb-4">Market Maker Challenge</h1>
+        <p class="text-sm text-gray-400 mb-4">
+            Find the hidden "True Value" (X) by making a market. You have 10 trades. The spread is fixed at 10.
+        </p>
+
+        <!-- Scoreboard -->
+        <div class="grid grid-cols-3 gap-4 text-center mb-6 bg-gray-900 p-4 rounded-lg">
+            <div>
+                <span class="block text-xs text-gray-400">TRADES</span>
+                <span id="trade-count" class="text-2xl font-bold">0</span> / 10
+            </div>
+            <div>
+                <span class="block text-xs text-gray-400">INVENTORY</span>
+                <span id="inventory" class="text-2xl font-bold">0</span>
+            </div>
+            <div>
+                <span class="block text-xs text-gray-400">CASH PNL</span>
+                <span id="pnl" class="text-lg font-bold">$0.00</span>
+            </div>
+        </div>
+
+        <!-- Game Controls -->
+        <div id="game-controls">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="flex-1">
+                    <label for="bid-input" class="block text-sm font-medium text-gray-400">Your Bid</label>
+                    <input type="number" id="bid-input" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md shadow-sm p-2 text-white text-lg font-bold" placeholder="e.g. 30">
+                </div>
+                <div class="flex-1 text-center">
+                    <span class="block text-sm font-medium text-gray-400">Your Ask</span>
+                    <span id="ask-display" class="mt-1 block w-full bg-gray-700 rounded-md p-2 text-white text-lg font-bold">--</span>
+                </div>
+            </div>
+            <button id="submit-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg">
+                Submit Market
+            </button>
+        </div>
+
+        <!-- Game Log -->
+        <div class="mt-4">
+            <h3 class="text-sm font-semibold text-gray-400 mb-2">Trade Log</h3>
+            <div id="log-box" class="h-40 bg-gray-900 rounded-lg p-3 overflow-y-auto text-sm">
+                <!-- Log messages will be added here -->
+            </div>
+        </div>
+
+        <!-- Game Over Screen (Hidden by default) -->
+        <div id="game-over" class="hidden text-center p-6 bg-gray-700 rounded-lg mt-4">
+            <h2 class="text-2xl font-bold text-orange-400 mb-4">Game Over!</h2>
+            <p class="text-lg">The secret 'True Value' (X) was: <span id="true-value" class="font-bold text-white">--</span></p>
+            <p class="text-lg">Your Cash PnL: <span id="final-cash" class="font-bold text-white">--</span></p>
+            <p class="text-lg">Inventory Value: <span id="final-inventory-value" class="font-bold text-white">--</span></p>
+            <hr class="border-gray-500 my-4">
+            <p class="text-2xl">Final PnL: <span id="final-pnl" class="font-bold text-green-400">--</span></p>
+            <button id="reset-button" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+                Play Again
+            </button>
+        </div>
+
+    </div>
+
+    <!-- 2. Game Logic -->
+    <script>
+        // --- Global Variables ---
+        let true_value_X;
+        let bull_belief;
+        let bear_belief;
+        let inventory = 0;
+        let pnl = 0.0;
+        let trade_count = 0;
+        const SPREAD = 10;
+        const MAX_TRADES = 10;
+
+        // --- DOM Element References ---
+        const tradeCountSpan = document.getElementById('trade-count');
+        const inventorySpan = document.getElementById('inventory');
+        const pnlSpan = document.getElementById('pnl');
+        const bidInput = document.getElementById('bid-input');
+        const askDisplaySpan = document.getElementById('ask-display');
+        const submitButton = document.getElementById('submit-button');
+        const logBox = document.getElementById('log-box');
+        
+        const gameOverDiv = document.getElementById('game-over');
+        const gameControlsDiv = document.getElementById('game-controls');
+        
+        const trueValueSpan = document.getElementById('true-value');
+        const finalCashSpan = document.getElementById('final-cash');
+        const finalInventoryValueSpan = document.getElementById('final-inventory-value');
+        const finalPnlSpan = document.getElementById('final-pnl');
+        const resetButton = document.getElementById('reset-button');
+
+        // --- Core Functions ---
+
+        /**
+         * Resets the game to its initial state
+         */
+        function startGame() {
+            // Set the secret value (integer 5 to 95)
+            true_value_X = Math.floor(Math.random() * 91) + 5;
+            bull_belief = true_value_X + 5;
+            bear_belief = true_value_X - 5;
+            
+            inventory = 0;
+            pnl = 0.0;
+            trade_count = 0;
+
+            // Reset UI
+            tradeCountSpan.textContent = "0";
+            inventorySpan.textContent = "0";
+            pnlSpan.textContent = "$0.00";
+            bidInput.value = "";
+            askDisplaySpan.textContent = "--";
+            logBox.innerHTML = "";
+            
+            // Hide game over, show controls
+            gameOverDiv.classList.add('hidden');
+            gameControlsDiv.classList.remove('hidden');
+            
+            addLogMessage("New game started. Find the hidden value!", "system");
+        }
+
+        /**
+         * Updates the Ask display as the user types a Bid
+         */
+        function updateAskDisplay() {
+            const bid = parseInt(bidInput.value);
+            if (isNaN(bid)) {
+                askDisplaySpan.textContent = "--";
+            } else {
+                askDisplaySpan.textContent = bid + SPREAD;
+            }
+        }
+
+        /**
+         * Adds a message to the game log
+         */
+        function addLogMessage(message, traderType) {
+            let entry = document.createElement('div');
+            entry.textContent = message;
+            
+            if (traderType === 'bull') {
+                entry.className = 'log-entry log-bull';
+            } else if (traderType === 'bear') {
+                entry.className = 'log-entry log-bear';
+            } else {
+                entry.className = 'log-entry log-system';
+            }
+            
+            logBox.prepend(entry); // Add to the top
+        }
+
+        /**
+         * Ends the game and shows the final score
+         */
+        function endGame() {
+            gameControlsDiv.classList.add('hidden');
+            gameOverDiv.classList.remove('hidden');
+
+            const inventoryValue = inventory * true_value_X;
+            const finalPnl = pnl + inventoryValue;
+
+            trueValueSpan.textContent = true_value_X;
+            finalCashSpan.textContent = `$${pnl.toFixed(2)}`;
+            finalInventoryValueSpan.textContent = `$${inventoryValue.toFixed(2)} (${inventory} @ $${true_value_X})`;
+            finalPnlSpan.textContent = `$${finalPnl.toFixed(2)}`;
+
+            if (finalPnl > 0) {
+                finalPnlSpan.classList.add('text-green-400');
+                finalPnlSpan.classList.remove('text-red-400');
+            } else if (finalPnl < 0) {
+                finalPnlSpan.classList.add('text-red-400');
+                finalPnlSpan.classList.remove('text-green-400');
+            }
+        }
+
+        /**
+         * Main game loop, called on button click
+         */
+        function playRound() {
+            const bid_price = parseInt(bidInput.value);
+            if (isNaN(bid_price)) {
+                addLogMessage("Please enter a valid Bid price.", "system");
+                return;
+            }
+            
+            const ask_price = bid_price + SPREAD;
+            let tradeOccurred = false;
+            
+            // 1. A random trader appears
+            const trader_type = Math.random() < 0.5 ? 'bull' : 'bear';
+            
+            if (trader_type === 'bull') {
+                // --- Bull Logic (believes X+5) ---
+                if (ask_price < bull_belief) {
+                    // Bull BUYS from us
+                    addLogMessage(`A Bull appeared and BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "bull");
+                    inventory--;
+                    pnl += ask_price;
+                    tradeOccurred = true;
+                } else if (bid_price > bull_belief) {
+                    // Bull SELLS to us (unconventional)
+                    addLogMessage(`A Bull appeared and SOLD 1 share @ $${bid_price.toFixed(2)}`, "bull");
+                    inventory++;
+                    pnl -= bid_price;
+                    tradeOccurred = true;
+                } else {
+                    addLogMessage("A Bull appeared. NO TRADE.", "bull");
+                }
+                
+            } else {
+                // --- Bear Logic (believes X-5) ---
+                if (bid_price > bear_belief) {
+                    // Bear SELLS to us
+                    addLogMessage(`A Bear appeared and SOLD 1 share @ $${bid_price.toFixed(2)}`, "bear");
+                    inventory++;
+                    pnl -= bid_price;
+                    tradeOccurred = true;
+                } else if (ask_price < bear_belief) {
+                    // Bear BUYS from us (unconventional)
+                    addLogMessage(`A Bear appeared and BOUGHT 1 share @ $${ask_price.toFixed(2)}`, "bear");
+                    inventory--;
+                    pnl += ask_price;
+                    tradeOccurred = true;
+                } else {
+                    addLogMessage("A Bear appeared. NO TRADE.", "bear");
+                }
+            }
+
+            // 3. Update scores
+            if (tradeOccurred) {
+                trade_count++;
+            }
+            
+            tradeCountSpan.textContent = trade_count;
+            inventorySpan.textContent = inventory;
+            pnlSpan.textContent = `$${pnl.toFixed(2)}`;
+
+            // 4. Check for game over
+            if (trade_count >= MAX_TRADES) {
+                endGame();
+            }
+        }
+
+        // --- 3. Event Listeners ---
+        
+        // Start the game when the page loads
+        document.addEventListener('DOMContentLoaded', startGame);
+        
+        // Connect the buttons
+        submitButton.addEventListener('click', playRound);
+        resetButton.addEventListener('click', startGame);
+        
+        // Auto-update the "Ask" field
+        bidInput.addEventListener('input', updateAskDisplay);
+        
+        // Allow pressing Enter to submit
+        bidInput.addEventListener('keyup', function(event) {
+            if (event.key === "Enter") {
+                submitButton.click();
+            }
+        });
+
+    </script>
+</body>
+</html>
